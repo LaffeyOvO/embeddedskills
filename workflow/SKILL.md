@@ -11,7 +11,9 @@ argument-hint: "[plan|build|build-flash|build-debug|observe|diagnose] ..."
 
 本 skill 不重复实现底层逻辑，只做发现、选择、串联和聚合。
 
-`observe` 阶段当前会给出 `jlink:rtt`、`jlink:swo`、`openocd:semihosting`、`openocd:itm`、`probe-rs:rtt` 这几类候选后端。
+支持 **Keil** / **GCC** / **EIDE** 三种构建后端，以及 **jlink** / **openocd** / **probe-rs** 三种 flash/debug/observe 后端。
+
+`observe` 阶段当前会给出 `jlink:rtt`、`jlink:swo`、`openocd:semihosting`、`openocd:itm`、`probe-rs:rtt` 这几类候选观测后端。
 
 ## 命令
 
@@ -44,7 +46,7 @@ workflow 不再维护独立的工程配置结构，所有工程参数统一从 `
 }
 ```
 
-workflow 通过读取 `.embeddedskills/config.json` 中其他 skill 的配置段来获取工程参数（如 `keil.project`、`jlink.device`、`probe-rs.chip` 等）。
+workflow 通过读取 `.embeddedskills/config.json` 中其他 skill 的配置段来获取工程参数（如 `keil.project`、`eide.project`、`eide.config`、`jlink.device`、`probe-rs.chip` 等）。
 
 ### 参数解析顺序
 
@@ -53,6 +55,7 @@ workflow 通过读取 `.embeddedskills/config.json` 中其他 skill 的配置段
 1. **CLI 参数**（优先级最高）
    - 条件：用户在命令行传入 `--build-backend`、`--flash-backend` 等参数
    - 示例：`workflow_run.py build-flash --build-backend=keil --flash-backend=jlink`
+   - `--build-backend` 可选值：`auto` / `keil` / `gcc` / `eide`
    - 行为：直接使用该参数指定的后端，跳过后续步骤
 
 2. **配置文件**（次优先）

@@ -28,9 +28,11 @@ from workflow_runtime import (  # noqa: E402
 def discover_projects(root: Path) -> dict:
     keil_projects = sorted(str(path.resolve()) for path in root.rglob("*.uvprojx"))
     gcc_projects = sorted(str(path.parent.resolve()) for path in root.rglob("CMakePresets.json"))
+    eide_projects = sorted(str(path.parents[1].resolve()) for path in root.rglob(".eide/eide.yml"))
     return {
         "keil_projects": keil_projects,
         "gcc_projects": gcc_projects,
+        "eide_projects": eide_projects,
     }
 
 
@@ -70,6 +72,8 @@ def main() -> None:
         build_candidates.append("keil")
     if discovery["gcc_projects"]:
         build_candidates.append("gcc")
+    if discovery["eide_projects"]:
+        build_candidates.append("eide")
 
     # 从配置中读取 preferred 设置
     preferred = {
@@ -95,6 +99,7 @@ def main() -> None:
         metrics={
             "keil_projects": len(discovery["keil_projects"]),
             "gcc_projects": len(discovery["gcc_projects"]),
+            "eide_projects": len(discovery["eide_projects"]),
         },
         state={
             "last_build": get_state_entry(state, "last_build"),
@@ -112,7 +117,7 @@ def main() -> None:
     else:
         print(result["summary"])
         print(f"workspace: {workspace}")
-        print(f"keil: {len(discovery['keil_projects'])}, gcc: {len(discovery['gcc_projects'])}")
+        print(f"keil: {len(discovery['keil_projects'])}, gcc: {len(discovery['gcc_projects'])}, eide: {len(discovery['eide_projects'])}")
         print(f"preferred: build={preferred['build']}, flash={preferred['flash']}, debug={preferred['debug']}, observe={preferred['observe']}")
 
 
