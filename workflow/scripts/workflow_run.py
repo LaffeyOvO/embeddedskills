@@ -71,6 +71,7 @@ def discover_projects(root: Path) -> dict:
     return {
         "keil": sorted(str(path.resolve()) for path in root.rglob("*.uvprojx")),
         "gcc": sorted(str(path.parent.resolve()) for path in root.rglob("CMakePresets.json")),
+        "eide": sorted(str(path.parents[1].resolve()) for path in root.rglob(".eide/eide.yml")),
     }
 
 
@@ -139,12 +140,42 @@ def select_build_backend(workflow_config: dict, discovery: dict, explicit: str |
     backend = explicit or workflow_config.get("preferred_build") or "auto"
     if backend != "auto":
         return backend, None
-    candidates = [name for name in ("keil", "gcc") if discovery[name]]
+    candidates = [name for name in ("keil", "gcc", "eide") if discovery[name]]
     if len(candidates) == 1:
         return candidates[0], None
     if len(candidates) > 1:
-        return None, {"code": "multiple_build_backends", "message": "同时发现 Keil 和 GCC 工程，请显式指定 build backend", "candidates": candidates}
+        return None, {"code": "multiple_build_backends", "message": "同时发现多个构建后端（Keil/GCC/EIDE），请显式指定 build backend", "candidates": candidates}
     return None, {"code": "no_build_backend", "message": "未发现可构建工程", "candidates": []}
+
+
+def build_eide_project(workspace: Path, full_config: dict, discovery: dict) -> dict:
+    eide_config = full_config.get("eide", {})
+    project = eide_config.get("project")
+    if not project:
+        project, error = _single_or_error(discovery["eide"], "EIDE 工程")
+        if error:
+            return {"status": "error", "action": "build", "error": error}
+
+    config_name = eide_config.get("config")
+    if not config_name:
+        return {"status": "error", "action": "build", "error": {"code": "missing_config", "message": "需要在 .embeddedskills/config.json 的 eide 段配置 config（构建配置名称）"}}
+
+    cmd = [
+        PYTHON_EXE,
+        str(ROOT_DIR / "eide" / "scripts" / "eide_build.py"),
+        "build",
+        "--workspace",
+        str(workspace),
+        "--project",
+        project,
+        "--config",
+        config_name,
+        "--json",
+    ]
+    log_dir = eide_config.get("log_dir")
+    if log_dir:
+        cmd.extend(["--log-dir", log_dir])
+    return _with_backend(run_json(cmd, workspace), "eide")
 
 
 def build_project(workspace: Path, full_config: dict, discovery: dict, backend: str | None) -> dict:
@@ -177,6 +208,9 @@ def build_project(workspace: Path, full_config: dict, discovery: dict, backend: 
         if uv4_exe:
             cmd.extend(["--uv4", uv4_exe])
         return _with_backend(run_json(cmd, workspace), selected)
+
+    if selected == "eide":
+        return build_eide_project(workspace, full_config, discovery)
 
     gcc_config = full_config.get("gcc", {})
     project = gcc_config.get("project")
@@ -444,12 +478,12 @@ def observe_project(workspace: Path, full_config: dict, explicit: str | None) ->
 def diagnose(workspace: Path, full_config: dict, discovery: dict, state: dict) -> dict:
     workflow_config = full_config.get("workflow", {})
     hints = []
-    if not discovery["keil"] and not discovery["gcc"]:
-        hints.append("当前 workspace 未发现 Keil/GCC 工程")
+    if not discovery["keil"] and not discovery["gcc"] and not discovery["eide"]:
+        hints.append("当前 workspace 未发现 Keil/GCC/EIDE 工程")
     if not get_state_entry(state, "last_build"):
         hints.append("尚未生成 last_build，后续 flash/debug 无法自动串联")
-    if workflow_config.get("preferred_build") == "auto" and discovery["keil"] and discovery["gcc"]:
-        hints.append("同时存在 Keil 与 GCC 工程，建议在 .embeddedskills/config.json 的 workflow 段固定 preferred_build")
+    if workflow_config.get("preferred_build") == "auto" and sum(1 for k in ("keil", "gcc", "eide") if discovery[k]) > 1:
+        hints.append("同时存在多个构建后端（Keil/GCC/EIDE），建议在 .embeddedskills/config.json 的 workflow 段固定 preferred_build")
     return {
         "status": "ok",
         "action": "diagnose",
@@ -473,7 +507,7 @@ def main() -> None:
     parser.add_argument("action", choices=["plan", "build", "build-flash", "build-debug", "observe", "diagnose"])
     parser.add_argument("--workspace", default=None, help="workspace 根目录，默认当前目录")
     parser.add_argument("--config", default=None, help="workflow config.json 路径（已废弃，仅保留兼容性）")
-    parser.add_argument("--build-backend", choices=["auto", "keil", "gcc"], default=None)
+    parser.add_argument("--build-backend", choices=["auto", "keil", "gcc", "eide"], default=None)
     parser.add_argument("--flash-backend", choices=["auto", "jlink", "openocd", "probe-rs"], default=None)
     parser.add_argument("--debug-backend", choices=["auto", "jlink", "openocd", "probe-rs"], default=None)
     parser.add_argument("--observe-backend", choices=["auto", "jlink", "openocd", "probe-rs"], default=None)

@@ -2,7 +2,7 @@
 
 `workflow` 是一个薄编排层，只负责：
 
-- 发现当前 workspace 中的 Keil / GCC 工程
+- 发现当前 workspace 中的 Keil / GCC / EIDE 工程
 - 选择构建、烧录、调试、观测后端
 - 串联 `.embeddedskills/state.json`
 - 聚合底层脚本输出
@@ -41,6 +41,7 @@ workflow 不再维护独立的工程配置结构，所有工程参数统一从 `
   },
   "keil": { "project": "...", "target": "..." },
   "gcc": { "project": "...", "preset": "..." },
+  "eide": { "project": "...", "config": "..." },
   "jlink": { "device": "...", "interface": "SWD" },
   "openocd": { "board": "...", "interface": "..." },
   "probe-rs": { "chip": "...", "protocol": "swd" }
