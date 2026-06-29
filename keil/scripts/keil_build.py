@@ -137,8 +137,11 @@ def _make_relative_to_workspace(workspace: Path, path: str) -> str:
         return path
 
 
+PROJECT_SUFFIXES = (".uvprojx", ".uvproj")
+
+
 def _collect_target_artifacts(project_path: Path, target: str) -> dict:
-    if project_path.suffix.lower() != ".uvprojx":
+    if project_path.suffix.lower() not in PROJECT_SUFFIXES:
         return {}
 
     try:
@@ -205,7 +208,7 @@ def _collect_target_artifacts(project_path: Path, target: str) -> dict:
 
 
 def _target_common_option(project_path: Path, target: str) -> tuple[Path | None, str]:
-    if project_path.suffix.lower() != ".uvprojx":
+    if project_path.suffix.lower() not in PROJECT_SUFFIXES:
         return None, ""
 
     try:

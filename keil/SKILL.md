@@ -1,7 +1,7 @@
 ---
 name: keil
 description: >-
-  Keil MDK 工程构建工具，用于扫描 .uvprojx/.uvmpw 工程、枚举 Target、执行
+  Keil MDK 工程构建工具，用于扫描 .uvprojx/.uvproj/.uvmpw 工程、枚举 Target、执行
   build/rebuild/clean 并解析构建日志，返回可供 jlink/openocd 复用的产物路径。
   flash 子命令仅作为兼容入口保留。当用户提到 Keil、MDK、uVision、UV4、
   Target 枚举、编译、重建、清理、烧录、下载固件、flash 时自动触发，也兼容 /keil 显式调用。
@@ -60,7 +60,7 @@ skill 目录下的 `config.json` 包含环境级配置，首次使用前确认 `
 
 | 子命令 | 用途 | 风险 |
 |--------|------|------|
-| `scan` | 搜索当前目录下的 .uvprojx/.uvmpw 工程 | 低 |
+| `scan` | 搜索当前目录下的 .uvprojx/.uvproj/.uvmpw 工程 | 低 |
 | `targets` | 枚举工程中的 Target | 低 |
 | `build` | 增量编译 | 中 |
 | `rebuild` | 全量重建 | 中 |
@@ -137,7 +137,8 @@ python <skill-dir>/scripts/keil_build.py <build|rebuild|clean|flash> \
 
 ## 核心规则
 
-- 不修改工程配置文件（.uvprojx / .uvmpw / .uvoptx）
+- 不修改工程配置文件（.uvprojx / .uvproj / .uvmpw / .uvoptx）
+- `.uvproj`（旧版 MDK4 工程）与 `.uvprojx` 共用同一套 XML 结构（Target/TargetOption/TargetCommonOption），产物解析、Target 枚举、扫描均已支持两种后缀
 - 不自动猜测工程路径或 Target，有歧义时必须询问用户
 - 参数解析优先级详见上方"参数解析优先级"章节
 - 构建成功后优先使用返回的 `flash_file` / `debug_file` 与 `jlink/openocd` 串联

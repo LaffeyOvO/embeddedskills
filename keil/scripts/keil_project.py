@@ -8,11 +8,14 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
+PROJECT_SUFFIXES = (".uvprojx", ".uvproj")
+
+
 def scan_projects(root: str) -> list[dict]:
-    """递归搜索 .uvprojx 和 .uvmpw 文件"""
+    """递归搜索 .uvprojx / .uvproj 和 .uvmpw 文件"""
     root_path = Path(root).resolve()
     projects = []
-    for ext in ("*.uvprojx", "*.uvmpw"):
+    for ext in ("*.uvprojx", "*.uvproj", "*.uvmpw"):
         for p in root_path.rglob(ext):
             projects.append({
                 "path": str(p),
@@ -24,12 +27,12 @@ def scan_projects(root: str) -> list[dict]:
 
 
 def list_targets(project_path: str) -> list[dict]:
-    """解析 .uvprojx 中的 TargetName"""
+    """解析 .uvprojx / .uvproj 中的 TargetName"""
     p = Path(project_path).resolve()
     if not p.exists():
         raise FileNotFoundError(f"工程文件不存在: {p}")
-    if p.suffix != ".uvprojx":
-        raise ValueError(f"仅支持 .uvprojx 文件，当前: {p.suffix}")
+    if p.suffix not in PROJECT_SUFFIXES:
+        raise ValueError(f"仅支持 .uvprojx / .uvproj 文件，当前: {p.suffix}")
 
     tree = ET.parse(str(p))
     root = tree.getroot()
